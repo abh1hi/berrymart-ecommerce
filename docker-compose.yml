@@ -1,0 +1,59 @@
+# docker-compose.yml
+# This file defines the services that make up your application.
+# It allows you to run a multi-container Docker application.
+
+version: '3.8'
+
+services:
+  # Frontend service (Vue.js App)
+  frontend:
+    build:
+      context: ./frontend # Looks for a Dockerfile in the 'frontend' directory
+    ports:
+      - "8080:8080" # Vue's default port is 8080
+    volumes:
+      - ./frontend:/app # Mounts the 'frontend' directory into the container for live-reloading
+      - /app/node_modules # A named volume to prevent local node_modules from overwriting container's
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Helps with file watching in some environments
+    depends_on:
+      - backend # Ensures the backend service starts before the frontend
+
+  # Backend service (Node.js API)
+  backend:
+    build:
+      context: ./backend # Looks for a Dockerfile in the 'backend' directory
+    ports:
+      - "5000:5000" # Maps port 5000 on your machine to port 5000 in the container
+    volumes:
+      - ./backend:/app # Mounts the 'backend' directory into the container for live-reloading
+      - /app/node_modules
+    environment:
+      - MONGODB_URI=mongodb://root:password@db:27017/berrymartdb?authSource=admin # Connection string for the database
+    depends_on:
+      - db # Ensures the database service starts before the backend
+
+  # Database service (MongoDB)
+  db:
+    image: mongo:5.0 # Uses the official MongoDB 5.0 image
+    restart: always # Always restarts the container if it stops
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - "27017:27017" # Maps port 27017 for direct database access if needed
+    volumes:
+      - mongo_data:/data/db # Persists database data
+
+  # Database management tool (Mongo Express)# Database management tool (Mongo Express)
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://root:password@db:27017/
+    depends_on:
+      - db
+volumes:
+  mongo_data: # Defines the named volume for data persistence
